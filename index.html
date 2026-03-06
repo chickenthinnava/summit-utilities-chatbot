@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Summit Utilities — AI Customer Service</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --g1:#1a6b3c;--g2:#229152;--g3:#2ecc71;
+  --bg:#f4faf6;--white:#ffffff;
+  --border:#d0e8d8;--text:#1a2e22;--muted:#5a8a6a;
+  --accent:#1a6b3c;--accent-light:#e8f5ee;
+  --red:#e03e5a;--yellow:#f59f00;--blue:#4dabf7;
+}
+html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);overflow:hidden;}
+body::before{content:'SUMMIT UTILITIES';position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-25deg);font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(40px,8vw,110px);color:rgba(26,107,60,0.04);white-space:nowrap;pointer-events:none;z-index:0;letter-spacing:0.1em;}
+.app{display:flex;height:100vh;width:100vw;position:relative;z-index:1;}
+
+/* ── SIDEBAR ── */
+.sidebar{width:240px;background:linear-gradient(180deg,#1a6b3c 0%,#124d2b 100%);display:flex;flex-direction:column;flex-shrink:0;}
+.sidebar-logo{padding:22px 18px;border-bottom:1px solid rgba(255,255,255,0.12);}
+.sidebar-logo .su{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;color:#fff;letter-spacing:-0.5px;}
+.sidebar-logo .tagline{font-size:10px;color:rgba(255,255,255,0.55);margin-top:3px;letter-spacing:0.6px;text-transform:uppercase;}
+.nav{padding:12px 8px;flex:1;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;font-size:0.87rem;color:rgba(255,255,255,0.6);transition:all 0.2s;margin-bottom:2px;}
+.nav-item:hover{background:rgba(255,255,255,0.1);color:#fff;}
+.nav-item.active{background:rgba(255,255,255,0.18);color:#fff;font-weight:600;}
+.nav-item .ni{font-size:15px;width:20px;text-align:center;}
+.sidebar-bottom{padding:14px;border-top:1px solid rgba(255,255,255,0.12);}
+.status-pill{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.18);border-radius:8px;padding:8px 12px;font-size:0.78rem;color:#fff;}
+.pulse{width:7px;height:7px;background:#7dffb0;border-radius:50%;animation:pulseAnim 2s infinite;flex-shrink:0;}
+@keyframes pulseAnim{0%,100%{box-shadow:0 0 0 0 rgba(125,255,176,0.5);}50%{box-shadow:0 0 0 5px rgba(125,255,176,0);}}
+
+/* ── MAIN ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+
+/* ── TOPBAR ── */
+.topbar{padding:14px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--white);box-shadow:0 1px 6px rgba(0,0,0,0.05);}
+.topbar-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;color:var(--text);}
+.tb-btn{background:var(--accent-light);border:1px solid var(--border);color:var(--accent);border-radius:8px;padding:7px 16px;font-size:0.82rem;cursor:pointer;transition:all 0.2s;font-family:'DM Sans',sans-serif;font-weight:500;}
+.tb-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+/* ── VIEWS ── */
+.view{display:none;flex:1;overflow:hidden;flex-direction:column;}
+.view.active{display:flex;}
+
+/* ── CHAT ── */
+.chat-area{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:16px;scroll-behavior:smooth;background:var(--bg);}
+.chat-area::-webkit-scrollbar{width:4px;}
+.chat-area::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+
+.msg{display:flex;gap:12px;animation:msgIn 0.3s ease;}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.msg.user{flex-direction:row-reverse;}
+
+.av{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:12px;flex-shrink:0;}
+.av.bot{background:linear-gradient(135deg,var(--g1),var(--g2));color:white;}
+.av.user{background:var(--accent-light);border:1px solid var(--border);color:var(--accent);}
+
+.bubble{max-width:75%;padding:13px 16px;border-radius:16px;font-size:0.9rem;line-height:1.65;}
+.msg.bot .bubble{background:var(--white);border:1px solid var(--border);border-top-left-radius:4px;color:var(--text);box-shadow:0 1px 6px rgba(0,0,0,0.04);}
+.msg.user .bubble{background:linear-gradient(135deg,var(--g1),var(--g2));color:white;border-top-right-radius:4px;}
+
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;}
+.opt{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;font-size:0.83rem;color:var(--muted);transition:all 0.18s;display:flex;align-items:center;gap:8px;font-family:'DM Sans',sans-serif;text-align:left;}
+.opt:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light);transform:translateY(-1px);}
+
+.typing-bubble{background:var(--white);border:1px solid var(--border);border-radius:16px;border-top-left-radius:4px;padding:13px 18px;display:flex;gap:5px;align-items:center;}
+.typing-bubble span{width:7px;height:7px;background:#b0cfbc;border-radius:50%;animation:bounce 1.2s infinite;}
+.typing-bubble span:nth-child(2){animation-delay:0.2s;}
+.typing-bubble span:nth-child(3){animation-delay:0.4s;}
+@keyframes bounce{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-6px);}}
+
+.form-card{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:16px;margin-top:10px;display:flex;flex-direction:column;gap:10px;}
+.form-card input,.form-card select,.form-card textarea{background:var(--white);border:1px solid var(--border);border-radius:9px;padding:10px 13px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.88rem;outline:none;transition:border 0.2s;}
+.form-card input:focus,.form-card select:focus,.form-card textarea:focus{border-color:var(--accent);}
+.form-card textarea{resize:none;}
+.form-btn{background:linear-gradient(135deg,var(--g1),var(--g2));border:none;border-radius:9px;padding:11px;color:white;font-family:'Syne',sans-serif;font-weight:700;font-size:0.88rem;cursor:pointer;transition:all 0.2s;}
+.form-btn:hover{box-shadow:0 4px 16px rgba(26,107,60,0.25);transform:translateY(-1px);}
+
+.back-link{color:var(--muted);font-size:0.82rem;cursor:pointer;margin-top:8px;display:inline-flex;align-items:center;gap:4px;}
+.back-link:hover{color:var(--accent);}
+
+.info-box{background:var(--accent-light);border:1px solid #b8dfc8;border-radius:12px;padding:14px 16px;margin-top:10px;font-size:0.87rem;line-height:1.85;color:var(--text);}
+.info-box b{color:var(--accent);}
+.success-box{background:var(--accent-light);border:1px solid var(--accent);border-radius:12px;padding:14px 16px;font-size:0.88rem;color:var(--accent);line-height:1.6;}
+.escalate-box{background:#fff0f3;border:1px solid var(--red);border-radius:12px;padding:14px 16px;font-size:0.88rem;color:#b03050;line-height:1.8;}
+
+.input-bar{padding:16px 24px;border-top:1px solid var(--border);background:var(--white);display:flex;gap:10px;align-items:center;}
+.input-bar input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:11px 16px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;transition:border 0.2s;}
+.input-bar input:focus{border-color:var(--accent);}
+.input-bar input::placeholder{color:#a0b8a8;}
+.send-btn{background:linear-gradient(135deg,var(--g1),var(--g2));border:none;border-radius:12px;width:42px;height:42px;color:white;font-size:17px;cursor:pointer;transition:all 0.2s;flex-shrink:0;}
+.send-btn:hover{box-shadow:0 4px 14px rgba(26,107,60,0.3);transform:scale(1.05);}
+
+/* ── DASHBOARD ── */
+.dash{padding:24px;overflow-y:auto;flex:1;background:var(--bg);}
+.dash h2{font-family:'Syne',sans-serif;font-weight:700;font-size:1.3rem;margin-bottom:20px;color:var(--text);}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+.stat-card{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:18px;transition:border 0.2s;box-shadow:0 1px 6px rgba(0,0,0,0.04);}
+.stat-card:hover{border-color:var(--accent);}
+.stat-val{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;color:var(--accent);}
+.stat-label{font-size:0.8rem;color:var(--muted);margin-top:4px;}
+.stat-delta{font-size:0.78rem;margin-top:8px;color:#229152;}
+.dash-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.dash-card{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:18px;box-shadow:0 1px 6px rgba(0,0,0,0.04);}
+.dash-card h3{font-family:'Syne',sans-serif;font-size:0.78rem;color:var(--muted);margin-bottom:14px;text-transform:uppercase;letter-spacing:0.5px;}
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:0.83rem;}
+.bar-row .blabel{width:130px;color:var(--text);flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bar-track{flex:1;background:var(--accent-light);border-radius:4px;height:8px;overflow:hidden;}
+.bar-fill{height:100%;background:linear-gradient(90deg,var(--g1),var(--g3));border-radius:4px;}
+.bar-count{width:32px;text-align:right;color:var(--muted);font-size:0.8rem;}
+.recent-item{display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg);border-radius:10px;font-size:0.83rem;margin-bottom:8px;}
+.ri-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.ri-dot.green{background:#2ecc71;}.ri-dot.yellow{background:var(--yellow);}.ri-dot.red{background:var(--red);}.ri-dot.blue{background:var(--blue);}
+.ri-text{flex:1;color:var(--text);}
+.ri-time{color:var(--muted);font-size:0.78rem;}
+.sat-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.sat-label{width:110px;font-size:0.83rem;color:var(--text);}
+.sat-stars{color:var(--yellow);font-size:0.9rem;}
+.sat-pct{font-size:0.8rem;color:var(--muted);margin-left:auto;}
+
+/* ── ACCOUNTS ── */
+.accs{padding:24px;overflow-y:auto;flex:1;background:var(--bg);}
+.accs h2{font-family:'Syne',sans-serif;font-weight:700;font-size:1.3rem;margin-bottom:20px;color:var(--text);}
+.acc-table{width:100%;border-collapse:collapse;background:var(--white);border-radius:14px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,0.04);}
+.acc-table th{text-align:left;padding:10px 14px;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);border-bottom:1px solid var(--border);background:var(--bg);}
+.acc-table td{padding:12px 14px;font-size:0.87rem;border-bottom:1px solid var(--border);color:var(--text);}
+.acc-table tr:hover td{background:var(--bg);}
+.badge{display:inline-block;padding:3px 10px;border-radius:6px;font-size:0.75rem;font-weight:600;}
+.badge.active{background:var(--accent-light);color:var(--accent);}
+.badge.overdue{background:#fff0f3;color:var(--red);}
+.badge.pending{background:#fff8e6;color:#b07d00;}
+
+@media(max-width:900px){
+  .sidebar{display:none;}
+  .stats-grid{grid-template-columns:1fr 1fr;}
+  .dash-row{grid-template-columns:1fr;}
+  .opts{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="su">Summit Utilities</div>
+      <div class="tagline">AI Customer Platform</div>
+    </div>
+    <div class="nav">
+      <div class="nav-item active" onclick="switchView('chat',this)"><span class="ni">💬</span> Live Chat</div>
+      <div class="nav-item" onclick="switchView('dashboard',this)"><span class="ni">📊</span> Dashboard</div>
+      <div class="nav-item" onclick="switchView('accounts',this)"><span class="ni">👥</span> Accounts</div>
+    </div>
+    <div class="sidebar-bottom">
+      <div class="status-pill"><div class="pulse"></div> AI Agent Online</div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="topbarTitle">Customer Chat</div>
+      <button class="tb-btn" onclick="exportChat()">⬇ Export Transcript</button>
+    </div>
+
+    <!-- CHAT VIEW -->
+    <div class="view active" id="view-chat">
+      <div class="chat-area" id="chatArea"></div>
+      <div class="input-bar">
+        <input type="text" id="userInput" placeholder="Type your question here…" onkeypress="handleKey(event)"/>
+        <button class="send-btn" onclick="handleSend()">➤</button>
+      </div>
+    </div>
+
+    <!-- DASHBOARD VIEW -->
+    <div class="view" id="view-dashboard">
+      <div class="dash">
+        <h2>Performance Dashboard</h2>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-val">1,247</div><div class="stat-label">Total Conversations</div><div class="stat-delta">↑ +38 today</div></div>
+          <div class="stat-card"><div class="stat-val">94%</div><div class="stat-label">Resolution Rate</div><div class="stat-delta">↑ +2% this week</div></div>
+          <div class="stat-card"><div class="stat-val">1.4m</div><div class="stat-label">Avg Response Time</div><div class="stat-delta">↓ Faster than last week</div></div>
+          <div class="stat-card"><div class="stat-val">4.7★</div><div class="stat-label">Satisfaction Score</div><div class="stat-delta">↑ +0.3 this month</div></div>
+        </div>
+        <div class="dash-row">
+          <div class="dash-card"><h3>Top Inquiry Categories</h3><div id="barChart"></div></div>
+          <div class="dash-card"><h3>Recent Activity</h3><div id="recentList"></div></div>
+        </div>
+        <div class="dash-row">
+          <div class="dash-card">
+            <h3>Customer Satisfaction by Topic</h3>
+            <div class="sat-row"><div class="sat-label">Pay Bill</div><div class="sat-stars">★★★★★</div><div class="sat-pct">96%</div></div>
+            <div class="sat-row"><div class="sat-label">Outage Report</div><div class="sat-stars">★★★★☆</div><div class="sat-pct">88%</div></div>
+            <div class="sat-row"><div class="sat-label">Billing Issues</div><div class="sat-stars">★★★★☆</div><div class="sat-pct">82%</div></div>
+            <div class="sat-row"><div class="sat-label">Technician</div><div class="sat-stars">★★★★★</div><div class="sat-pct">91%</div></div>
+            <div class="sat-row"><div class="sat-label">Energy Tips</div><div class="sat-stars">★★★★★</div><div class="sat-pct">98%</div></div>
+          </div>
+          <div class="dash-card"><h3>Active Escalations</h3><div id="escalationList"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACCOUNTS VIEW -->
+    <div class="view" id="view-accounts">
+      <div class="accs">
+        <h2>Account Database</h2>
+        <table class="acc-table">
+          <thead><tr><th>Account #</th><th>Name</th><th>Address</th><th>Balance</th><th>Status</th><th>Last Bill</th></tr></thead>
+          <tbody id="accTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var conversationHistory = [];
+
+var accounts = [
+  {id:'ACC001',name:'James Mitchell',addr:'142 Oakwood Dr, Denver CO',balance:'$84.20',status:'active',bill:'Feb 2026'},
+  {id:'ACC002',name:'Sandra Reyes',addr:'88 Maple Ave, Denver CO',balance:'$212.50',status:'overdue',bill:'Jan 2026'},
+  {id:'ACC003',name:'David Chen',addr:'330 Pine St, Aurora CO',balance:'$56.10',status:'active',bill:'Feb 2026'},
+  {id:'ACC004',name:'Priya Sharma',addr:'17 Elm Blvd, Lakewood CO',balance:'$0.00',status:'active',bill:'Feb 2026'},
+  {id:'ACC005',name:'Marcus Williams',addr:'504 Cedar Ln, Thornton CO',balance:'$145.80',status:'pending',bill:'Feb 2026'},
+  {id:'ACC006',name:'Emily Torres',addr:'29 Birch Ct, Westminster CO',balance:'$99.40',status:'active',bill:'Feb 2026'}
+];
+
+var usageData = [
+  {month:'Sep',kwh:910},{month:'Oct',kwh:870},{month:'Nov',kwh:1020},
+  {month:'Dec',kwh:1180},{month:'Jan',kwh:1090},{month:'Feb',kwh:756}
+];
+
+var topCats = [
+  {label:'Pay Bill',count:342},{label:'Report Outage',count:218},
+  {label:'Billing Issues',count:195},{label:'Schedule Technician',count:143},
+  {label:'Usage History',count:122},{label:'Energy Tips',count:98}
+];
+
+var recentActivity = [
+  {color:'green',text:'ACC003 — Bill paid $56.10',time:'2m ago'},
+  {color:'red',text:'ACC002 — Overdue escalated',time:'8m ago'},
+  {color:'yellow',text:'ACC005 — Payment plan requested',time:'15m ago'},
+  {color:'blue',text:'ACC001 — Outage reported #OUT-4821',time:'22m ago'},
+  {color:'green',text:'ACC006 — Enrolled paperless billing',time:'31m ago'}
+];
+
+var escalations = [
+  {text:'ACC002 — Billing dispute over $200',c:'red'},
+  {text:'ACC007 — Repeated outage same address',c:'yellow'},
+  {text:'ACC011 — Service transfer delayed 3x',c:'yellow'}
+];
+
+var mainOptions = [
+  {icon:'💳',label:'Pay Bill'},
+  {icon:'📊',label:'View Usage History'},
+  {icon:'👤',label:'Update Account Info'},
+  {icon:'⚡',label:'Report an Outage'},
+  {icon:'🔍',label:'Check Outage Status'},
+  {icon:'🔧',label:'Schedule a Technician'},
+  {icon:'❓',label:'Billing Issues'},
+  {icon:'🔄',label:'Start / Stop / Transfer Service'},
+  {icon:'📄',label:'Paperless Billing'},
+  {icon:'💡',label:'Energy Saving Tips'},
+  {icon:'🆘',label:'Speak to a Human Agent'}
+];
+
+window.onload = function() {
+  buildDashboard();
+  buildAccounts();
+  botMsg("👋 Hello! Welcome to <b>Summit Utilities AI Customer Service</b>.<br>I'm here to help with billing, outages, scheduling, and more.");
+  setTimeout(showMainMenu, 600);
+};
+
+function switchView(name, el) {
+  document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
+  document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
+  document.getElementById('view-' + name).classList.add('active');
+  el.classList.add('active');
+  var titles = {chat:'Customer Chat', dashboard:'Performance Dashboard', accounts:'Account Database'};
+  document.getElementById('topbarTitle').textContent = titles[name];
+}
+
+function botMsg(html) {
+  var ca = document.getElementById('chatArea');
+  var d = document.createElement('div');
+  d.className = 'msg bot';
+  d.innerHTML = '<div class="av bot">SU</div><div class="bubble">' + html + '</div>';
+  ca.appendChild(d);
+  ca.scrollTop = ca.scrollHeight;
+}
+
+function userMsg(text) {
+  var ca = document.getElementById('chatArea');
+  var d = document.createElement('div');
+  d.className = 'msg user';
+  d.innerHTML = '<div class="av user">You</div><div class="bubble">' + text + '</div>';
+  ca.appendChild(d);
+  ca.scrollTop = ca.scrollHeight;
+  conversationHistory.push({role:'user', content:text});
+}
+
+function showTyping() {
+  var ca = document.getElementById('chatArea');
+  var d = document.createElement('div');
+  d.className = 'msg bot';
+  d.id = 'typingInd';
+  d.innerHTML = '<div class="av bot">SU</div><div class="typing-bubble"><span></span><span></span><span></span></div>';
+  ca.appendChild(d);
+  ca.scrollTop = ca.scrollHeight;
+}
+
+function hideTyping() {
+  var t = document.getElementById('typingInd');
+  if (t) t.remove();
+}
+
+function showMainMenu() {
+  var ca = document.getElementById('chatArea');
+  var d = document.createElement('div');
+  d.className = 'msg bot';
+  var btns = mainOptions.map(function(o) {
+    return '<button class="opt" onclick="selectOpt(\'' + o.label + '\')">' + o.icon + ' ' + o.label + '</button>';
+  }).join('');
+  d.innerHTML = '<div class="av bot">SU</div><div class="bubble">Please select an option to get started:<div class="opts">' + btns + '</div></div>';
+  ca.appendChild(d);
+  ca.scrollTop = ca.scrollHeight;
+}
+
+function selectOpt(opt) {
+  userMsg(opt);
+  showTyping();
+  setTimeout(function(){ hideTyping(); handleOption(opt); }, 700);
+}
+
+function handleOption(opt) {
+  var ca = document.getElementById('chatArea');
+  var d = document.createElement('div');
+  d.className = 'msg bot';
+  var html = '';
+
+  if (opt === 'Pay Bill') {
+    html = '<b>💳 Pay Your Bill</b><br>Enter your account details below.<div class="form-card">' +
+      '<input type="text" placeholder="Account Number (e.g. ACC001)" id="pbAcc"/>' +
+      '<input type="number" placeholder="Amount ($)"/>' +
+      '<select><option>Credit / Debit Card</option><option>Bank Transfer (ACH)</option><option>PayPal</option></select>' +
+      '<button class="form-btn" onclick="lookupAndPay()">Submit Payment</button></div>';
+
+  } else if (opt === 'View Usage History') {
+    html = '<b>📊 Usage History</b><div class="form-card">' +
+      '<input type="text" placeholder="Account Number"/>' +
+      '<button class="form-btn" onclick="showUsage()">View History</button></div>';
+
+  } else if (opt === 'Update Account Info') {
+    html = '<b>👤 What would you like to update?</b><div class="opts">' +
+      '<button class="opt" onclick="selectOpt(\'Update Email\')">📧 Email</button>' +
+      '<button class="opt" onclick="selectOpt(\'Update Phone\')">📱 Phone</button>' +
+      '<button class="opt" onclick="selectOpt(\'Update Address\')">🏠 Address</button>' +
+      '<button class="opt" onclick="selectOpt(\'Update Password\')">🔒 Password</button></div>';
+
+  } else if (opt === 'Update Email' || opt === 'Update Phone' || opt === 'Update Address' || opt === 'Update Password') {
+    var field = opt.replace('Update ', '');
+    html = '<b>✏️ ' + opt + '</b><div class="form-card">' +
+      '<input type="text" placeholder="Account Number"/>' +
+      '<input type="text" placeholder="New ' + field + '"/>' +
+      '<input type="text" placeholder="Confirm ' + field + '"/>' +
+      '<button class="form-btn" onclick="simSuccess(\'' + opt + ' updated successfully. Confirmation email sent.\')">Save Changes</button></div>';
+
+  } else if (opt === 'Report an Outage') {
+    html = '<b>⚡ Report an Outage</b><div class="form-card">' +
+      '<input type="text" placeholder="Account Number or Service Address"/>' +
+      '<input type="text" placeholder="Your Phone Number"/>' +
+      '<select><option>Complete Power Outage</option><option>Partial Outage</option><option>Flickering Lights</option><option>Gas Outage</option></select>' +
+      '<textarea placeholder="Additional details (optional)" rows="2"></textarea>' +
+      '<button class="form-btn" onclick="simSuccess(\'Outage reported! Ref #OUT-2026-4821. Crew dispatched. Est. restoration: 2–4 hrs. SMS updates will follow.\')">Submit Report</button></div>';
+
+  } else if (opt === 'Check Outage Status') {
+    html = '<b>🔍 Outage Status</b><div class="form-card">' +
+      '<input type="text" placeholder="Account Number or ZIP Code"/>' +
+      '<button class="form-btn" onclick="simSuccess(\'✅ No active outages in your area as of today 3:00 PM. If experiencing issues, please report an outage.\')">Check Now</button></div>';
+
+  } else if (opt === 'Schedule a Technician') {
+    html = '<b>🔧 Schedule Technician Visit</b><div class="form-card">' +
+      '<input type="text" placeholder="Account Number"/>' +
+      '<input type="text" placeholder="Service Address"/>' +
+      '<select><option>Meter Issue</option><option>Gas Leak Inspection</option><option>New Installation</option><option>General Repair</option></select>' +
+      '<input type="date"/>' +
+      '<select><option>8 AM – 12 PM</option><option>12 PM – 4 PM</option><option>4 PM – 8 PM</option></select>' +
+      '<button class="form-btn" onclick="simSuccess(\'Technician scheduled! Conf #TECH-7741. You will receive a call 30 mins before arrival.\')">Confirm Appointment</button></div>';
+
+  } else if (opt === 'Billing Issues') {
+    html = '<b>❓ Billing Issues</b><div class="opts">' +
+      '<button class="opt" onclick="selectOpt(\'Dispute a Charge\')">⚠️ Dispute Charge</button>' +
+      '<button class="opt" onclick="selectOpt(\'Request Payment Plan\')">📅 Payment Plan</button>' +
+      '<button class="opt" onclick="selectOpt(\'Late Fee Waiver\')">🙏 Late Fee Waiver</button>' +
+      '<button class="opt" onclick="selectOpt(\'Missing Payment\')">💸 Missing Payment</button></div>';
+
+  } else if (opt === 'Dispute a Charge' || opt === 'Request Payment Plan' || opt === 'Late Fee Waiver' || opt === 'Missing Payment') {
+    html = '<b>' + opt + '</b><div class="form-card">' +
+      '<input type="text" placeholder="Account Number"/>' +
+      '<input type="text" placeholder="Billing Period (e.g. Feb 2026)"/>' +
+      '<textarea placeholder="Describe your issue" rows="3"></textarea>' +
+      '<button class="form-btn" onclick="simSuccess(\'Request submitted. Case #BIL-3392. A billing specialist will contact you within 2 business days.\')">Submit</button></div>';
+
+  } else if (opt === 'Start / Stop / Transfer Service') {
+    html = '<b>🔄 Service Management</b><div class="opts">' +
+      '<button class="opt" onclick="selectOpt(\'Start Service\')">▶️ Start</button>' +
+      '<button class="opt" onclick="selectOpt(\'Stop Service\')">⏹️ Stop</button>' +
+      '<button class="opt" onclick="selectOpt(\'Transfer Service\')">🔀 Transfer</button></div>';
+
+  } else if (opt === 'Start Service' || opt === 'Stop Service' || opt === 'Transfer Service') {
+    html = '<b>' + opt + '</b><div class="form-card">' +
+      '<input type="text" placeholder="Account Number"/>' +
+      '<input type="text" placeholder="Service Address"/>' +
+      '<input type="date"/>' +
+      '<button class="form-btn" onclick="simSuccess(\'' + opt + ' request submitted. Conf #SVC-5519. You will be contacted within 1 business day.\')">Submit</button></div>';
+
+  } else if (opt === 'Paperless Billing') {
+    html = '<b>📄 Enroll in Paperless Billing</b><div class="form-card">' +
+      '<input type="text" placeholder="Account Number"/>' +
+      '<input type="email" placeholder="Email for e-bills"/>' +
+      '<button class="form-btn" onclick="simSuccess(\'Enrolled! Your first e-bill arrives next billing cycle. Thank you for going green 🌱\')">Enroll Now</button></div>';
+
+  } else if (opt === 'Energy Saving Tips') {
+    html = '<b>💡 Energy Saving Tips</b><div class="info-box">' +
+      '🌡️ <b>Thermostat:</b> Set to 68°F in winter, 78°F in summer — saves up to 15%.<br>' +
+      '💧 <b>Water Heater:</b> Lower to 120°F to cut water heating costs by 10%.<br>' +
+      '🔌 <b>Phantom Loads:</b> Unplug idle electronics — they draw power 24/7.<br>' +
+      '🪟 <b>Windows:</b> Use blinds to block summer heat, retain winter warmth.<br>' +
+      '💡 <b>LED Bulbs:</b> Use 75% less energy than incandescent bulbs.<br>' +
+      '🌙 <b>Off-Peak Hours:</b> Run appliances after 9 PM for lower utility rates.</div>';
+
+  } else if (opt === 'Speak to a Human Agent') {
+    html = '<div class="escalate-box">' +
+      '🔴 <b>Escalating to Human Agent</b><br><br>' +
+      'Your conversation has been flagged and a representative will contact you shortly.<br><br>' +
+      '📞 <b>Direct Line:</b> 1-800-SUMMIT-1<br>' +
+      '📧 <b>Email:</b> support@summitutilities.com<br>' +
+      '⏰ <b>Hours:</b> Mon–Fri 7 AM–8 PM · Sat 8 AM–5 PM<br><br>' +
+      '<i>Reference ID: ESC-' + Math.floor(Math.random()*90000+10000) + '</i></div>';
+  } else {
+    html = 'Thanks for reaching out! A representative will assist you shortly.';
+  }
+
+  d.innerHTML = '<div class="av bot">SU</div><div class="bubble">' + html + '<br><span class="back-link" onclick="goBack()">← Back to menu</span></div>';
+  ca.appendChild(d);
+  ca.scrollTop = ca.scrollHeight;
+}
+
+function lookupAndPay() {
+  var accEl = document.getElementById('pbAcc');
+  var acc = accEl ? accEl.value.trim().toUpperCase() : '';
+  var found = accounts.find(function(a){ return a.id === acc; });
+  if (found) {
+    simSuccess('Payment confirmed for <b>' + found.name + '</b> (' + found.id + '). Balance: ' + found.balance + '. Receipt sent to your email.');
+  } else {
+    simSuccess('Payment submitted! A confirmation receipt will be sent to your registered email address.');
+  }
+}
+
+function showUsage() {
+  hideTyping();
+  var max = Math.max.apply(null, usageData.map(function(u){ return u.kwh; }));
+  var bars = usageData.map(function(u) {
+    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:0.82rem;">' +
+      '<span style="width:28px;color:var(--muted)">' + u.month + '</span>' +
+      '<div style="flex:1;background:var(--accent-light);border-radius:4px;height:10px;overflow:hidden;">' +
+      '<div style="width:' + Math.round(u.kwh/max*100) + '%;background:linear-gradient(90deg,var(--g1),var(--g3));height:100%;border-radius:4px;"></div></div>' +
+      '<span style="width:60px;color:var(--text);text-align:right">' + u.kwh + ' kWh</span></div>';
+  }).join('');
+  botMsg('<b>📊 Usage — Last 6 Months</b><div class="info-box" style="margin-top:10px;">' + bars + '<br>Avg monthly: <b style="color:var(--accent)">988 kWh</b></div><span class="back-link" onclick="goBack()">← Back to menu</span>');
+}
+
+function simSuccess(msg) {
+  hideTyping();
+  botMsg('<div class="success-box">✅ ' + msg + '</div>');
+  setTimeout(function() {
+    botMsg('Is there anything else I can help you with?');
+    showMainMenu();
+  }, 800);
+}
+
+function goBack() {
+  botMsg("No problem! Here's what I can help you with:");
+  showMainMenu();
+}
+
+function handleSend() {
+  var inp = document.getElementById('userInput');
+  var text = inp.value.trim();
+  if (!text) return;
+  inp.value = '';
+  userMsg(text);
+  showTyping();
+  setTimeout(function() {
+    hideTyping();
+    botMsg("Thanks for your message! For the best experience, please select from the options below.");
+    showMainMenu();
+  }, 800);
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter') handleSend();
+}
+
+function exportChat() {
+  var txt = 'SUMMIT UTILITIES — CHAT TRANSCRIPT\nExported: ' + new Date().toLocaleString() + '\n' + '─'.repeat(50) + '\n\n';
+  document.querySelectorAll('#chatArea .msg').forEach(function(m) {
+    var role = m.classList.contains('user') ? 'CUSTOMER' : 'AI AGENT';
+    txt += '[' + role + ']\n' + (m.querySelector('.bubble') ? m.querySelector('.bubble').innerText : '') + '\n\n';
+  });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([txt], {type:'text/plain'}));
+  a.download = 'summit-transcript-' + Date.now() + '.txt';
+  a.click();
+}
+
+function buildDashboard() {
+  var max = Math.max.apply(null, topCats.map(function(c){ return c.count; }));
+  document.getElementById('barChart').innerHTML = topCats.map(function(c) {
+    return '<div class="bar-row"><div class="blabel">' + c.label + '</div>' +
+      '<div class="bar-track"><div class="bar-fill" style="width:' + Math.round(c.count/max*100) + '%"></div></div>' +
+      '<div class="bar-count">' + c.count + '</div></div>';
+  }).join('');
+
+  document.getElementById('recentList').innerHTML = recentActivity.map(function(r) {
+    return '<div class="recent-item"><div class="ri-dot ' + r.color + '"></div><div class="ri-text">' + r.text + '</div><div class="ri-time">' + r.time + '</div></div>';
+  }).join('');
+
+  document.getElementById('escalationList').innerHTML = escalations.map(function(e) {
+    return '<div class="recent-item"><div class="ri-dot ' + e.c + '"></div><div class="ri-text">' + e.text + '</div></div>';
+  }).join('');
+}
+
+function buildAccounts() {
+  document.getElementById('accTableBody').innerHTML = accounts.map(function(a) {
+    return '<tr>' +
+      '<td style="font-family:\'Syne\',sans-serif;color:var(--accent);font-weight:700">' + a.id + '</td>' +
+      '<td>' + a.name + '</td>' +
+      '<td style="color:var(--muted)">' + a.addr + '</td>' +
+      '<td style="font-weight:600">' + a.balance + '</td>' +
+      '<td><span class="badge ' + a.status + '">' + a.status + '</span></td>' +
+      '<td style="color:var(--muted)">' + a.bill + '</td></tr>';
+  }).join('');
+}
+</script>
+</body>
+</html>
